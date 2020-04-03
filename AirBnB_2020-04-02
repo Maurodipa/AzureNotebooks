@@ -1,0 +1,255 @@
+#definisci la daa di oggi
+import datetime
+oggi_Obj = datetime.date.today()
+ieri_obj = oggi_Obj - datetime.timedelta(days=1)
+print("oggi",oggi_Obj,"ieri",ieri_obj)
+
+# devo aggiungere 1 per via del fuso orario col Messico. Potrei essere più preciso ed aggiungere solo 7 ore...
+# da = oggi + datetime.timedelta(1)
+# a = oggi + datetime.timedelta(3)
+# print(da, a)
+
+oggi_str = oggi_Obj.strftime("%Y-%m-%d")
+ieri_str = ieri_obj.strftime("%Y-%m-%d")
+
+#oggi_str = '2020-03-31'
+#ieri_str = '2020-03-30'
+
+print('Current Timestamp : ', oggi_str, " - ieri: ",ieri_str)
+
+print (oggi_Obj.strftime("%m"))
+
+
+
+
+
+
+i = oggi_Obj - datetime.timedelta(days=1)
+inizio_dei_tempi = oggi_Obj - datetime.timedelta(days=365)
+
+while (i > inizio_dei_tempi):
+    try:
+        titolo = i.strftime("%Y-%m-%d") + '.json'
+        with open(titolo, 'r') as f:
+            print("\n")
+            print("trovato file = ", titolo)
+            ieri_str = i.strftime("%Y-%m-%d")
+            i = inizio_dei_tempi
+            
+    except IOError:
+        print("file non esiste per la data =", i.strftime("%Y-%m-%d"))
+        i -=  datetime.timedelta(days=1)
+            
+print('ieri_str = ', ieri_str)        
+        
+        
+        
+        
+import requests
+from bs4 import BeautifulSoup
+
+# url della pagina della casa, ricerca disponibilità, la url contiene la data odierna mese e anno e durata  = 12 mesi
+#url_root = "https://www.airbnb.it/rooms/27947262?wl_source=list&wl_id=631520883&role=wishlist_owner&adults=1&children=0&infants=0&source_impression_id=p3_1584917470_nAalTHU%2F29lkz44D"
+#url = "https://www.airbnb.it/api/v2/homes_pdp_availability_calendar?currency=EUR&key=d306zoyjsyarp7ifhu67rjxn52tv0t20&locale=it&listing_id=27947262&month=3&year=2020&count=12"
+# ?currency=EUR&key=d306zoyjsyarp7ifhu67rjxn52tv0t20&locale=it&listing_id=27947262&month=04&year=2020&count=48
+url_base="https://www.airbnb.it/api/v2/homes_pdp_availability_calendar?currency=EUR&key=d306zoyjsyarp7ifhu67rjxn52tv0t20&locale=it&listing_id=27947262&month="
+
+url = url_base + oggi_Obj.strftime("%m") + "&year=" + oggi_Obj.strftime("%Y") +"&count=12"   # "&year=2020&count=12"
+print(url)
+
+response = requests.get(url)
+if response.status_code == 200:
+    print("Success")
+else:
+    print("Failure")
+
+results_page = BeautifulSoup(response.content,'lxml')
+print(results_page.prettify())
+
+
+#stampa il dizionario odierno su video e su disco
+str = results_page.find('p').get_text()
+#print(str)
+
+titolo = oggi_str + ".json"
+with open(titolo, 'w') as filetesto:
+    filetesto.write(str)
+    
+    
+
+import json
+dictionary = json.loads(str)
+#item = dictionary
+#item = dictionary['calendar_months']    # è una lista, che contiene dei dizionari
+#item = dictionary['calendar_months'][0]['month'] # il primo campo della lista contiene il mese di marzo
+#item = dictionary['calendar_months'][1]['days'][0]['date'] # il primo campo della lista contiene il primo giorno del mese
+#item = dictionary['calendar_months'][1]['days'][0]['price']['local_price_formatted'] # contiene il prezzo del primo giorno del secondo mese da oggi (1 aprile)
+#item = dictionary['calendar_months'][1]['days'][0]['available_for_checkin'] # disponibile per il check-in
+#item = dictionary['calendar_months'][1]['days'][0]['bookable'] #prenotabile
+item = dictionary['calendar_months'][7]['days'][20]
+
+print(item)
+
+
+# carica il dizionario del giorno precedente
+
+titolo = ieri_str + ".json"
+with open(titolo, 'r') as filetesto:
+    dictionary_ieri_str = filetesto.read()
+    dizionario_di_ieri = json.loads(dictionary_ieri_str)
+
+
+def boolean_conversion_to_sring(boolean_variable):
+    if boolean_variable == True:
+        return "True"
+    else:
+        return "False"
+        
+        
+# questa funzione fa il check se i valori di oggi sono presenti nel dizionario di ieri
+
+def check_con_valori_di_ieri(data,valore,stato, dizionario_di_ieri):
+    for month in range(len(dizionario_di_ieri['calendar_months'])):
+        for day in dizionario_di_ieri['calendar_months'][month]['days']:
+            giorno = day['date']
+            prezzo = day['price']['local_price_formatted']
+            libero = day['available']
+            if (giorno == data):
+                if (prezzo != valore or libero != stato):
+                    #print(giorno, "|", prezzo, "|", libero)
+                    #return [False,str(giorno + "|" + prezzo + "|" + boolean_conversion_to_sring(libero)+ "\n")]
+                    line = giorno + "|" + prezzo + "|" + boolean_conversion_to_sring(libero)
+                    return False, line, data, valore, stato
+                else:
+                    return True,"0"
+    return False, "Nuova data"
+print(check_con_valori_di_ieri("2020-03-01","500€",False,dizionario_di_ieri)[1])
+# print(dictionary) - {'date': '2020-03-01', 'available': False, 'max_nights': 30, 'min_nights': 2, 'price': {'local_price_formatted': '44€'}, 'available_for_checkin': False, 'available_for_checkout': False}
+#print(dictionary_ieri)
+
+
+
+
+#FUNZIONE CHE 
+#  a.STAMPA FILE CSV A VIDEO 
+#  b.STAMPA FILE CSV SU DISCO  (es: 2020-03-20.csv)
+#  c. STAMPA FILE DELTA SU DISCO (es: 2020-03-30_differenza.csv)
+
+titolo = oggi_str + ".csv"
+filetesto=open(titolo, "w", encoding=('utf-8'))
+
+header_differenza=0
+with open(titolo, "w") as filetesto:
+    filetesto.write("DATA|PREZZO|LIBERO\n")
+
+    for month in range(len(dictionary['calendar_months'])):
+        for day in dictionary['calendar_months'][month]['days']:
+            giorno = day['date']
+            prezzo = day['price']['local_price_formatted']
+            libero = day['available']
+            #print(giorno, "|", prezzo, "|", libero)
+            line = giorno + "|" + prezzo + "|" + boolean_conversion_to_sring(libero)
+            filetesto.write(line+ "\n")
+            
+            verifica = check_con_valori_di_ieri(giorno,prezzo,libero, dizionario_di_ieri)
+            print(verifica)
+            
+            if (verifica[0] == False and verifica[1] != "Nuova data"):
+                #print("VERIFICA = FALSE")
+                
+                if (header_differenza == 0): 
+                        differenza_str = "DATA PRECEDENTE|PREZZO PRECEDENTE|LIBERO PRECEDENTE|DATA NUOVA|PREZZO NUOVO|LIBERO NUOVO\n"
+                        header_differenza = 1
+                linea_diff = verifica[1]
+                differenza_str += line+"|"+linea_diff+ "\n"
+            
+    
+    with open (oggi_str+"_differenza.csv","w") as differenza:
+        differenza.write(differenza_str)
+                        
+                        
+                        
+  # dict_new = {'2020-03-29' :  
+#                [('2020-01-15', '115€', True), ('2020-02-28', '44€', True),('2020-03-29', '55€', False)]}
+
+def aggiungi_diff_dict_new(giorno, prezzo, libero, dict_new):
+    tuple = (oggi_str, prezzo, libero)
+    if (dict_new.get(giorno) == None):
+        dict_new[giorno] = [tuple]
+    else:
+        dict_new[giorno] += [tuple]
+    
+    return(dict_new)
+    
+    
+def inizializza_dict_old():
+    dict_old = {}
+    for month in range(len(dizionario_di_ieri['calendar_months'])):
+        for day in dizionario_di_ieri['calendar_months'][month]['days']:
+            giorno = day['date']
+            prezzo = day['price']['local_price_formatted']
+            libero = day['available']
+            
+            tuple = (ieri_str, prezzo, libero)
+            dict_old[giorno] = [tuple]
+    
+    titolo = ieri_str + "_dict.json"
+    with open(titolo, 'w') as outfile:
+        json.dump(dict_old, outfile)  
+        
+    return dict_old
+    
+    # tasks: 
+# 1. apre il file con il dizionario totale di ieri (es: 2020-03-30_dict.json)
+# 2. lo carica in un dizionario (es: dict_old) e crea dict_new = dict_old
+# 3. verifica i valori di dictionary con il dizionario_di_ieri
+# 4. se c'è una differenza, chiama la funzione aggiungi_diff_dict_new, che aggiunge la diffeenza al dict_new
+# 5. salva su disco dict_new (es. 2020-03-31_dict.json) 
+
+
+# dict_new = {'2020-03-29' :  
+#                [('2020-01-15', '115€', True), ('2020-02-28', '44€', True),('2020-03-29', '55€', False)]}
+
+import json
+titolo = ieri_str + "_dict.json"
+try:
+    with open(titolo, 'r') as f:
+        print("try")
+        dictionary_ieri_str = f.read()
+        dict_old = json.loads(dictionary_ieri_str)
+        dict_new = dict_old  
+except IOError:
+    print("dict_old non esiste, creo dict_new come dizionario con le tuple di ieri")
+    dict_old = inizializza_dict_old()
+    dict_new = dict_old;
+    
+print(dict_old)
+    
+titolo = oggi_str + ".csv"
+#filetesto=open(titolo, "w", encoding=('utf-8'))
+
+
+for month in range(len(dictionary['calendar_months'])):
+        for day in dictionary['calendar_months'][month]['days']:
+            giorno = day['date']
+            prezzo = day['price']['local_price_formatted']
+            libero = day['available']
+            #print(giorno, "|", prezzo, "|", libero)
+            line = giorno + "|" + prezzo + "|" + boolean_conversion_to_sring(libero)
+            
+            verifica = check_con_valori_di_ieri(giorno,prezzo,libero, dizionario_di_ieri)
+            if (verifica[0] == False and verifica[1] != "Nuova data"):
+                #print("VERIFICA = FALSE")
+                print('giorno in cui dà false = ', giorno)
+                dict_new = aggiungi_diff_dict_new(verifica[2], verifica[3], verifica[4], dict_new)
+                
+    
+titolo = oggi_str + "_dict.json"
+with open(titolo, 'w') as outfile:
+    json.dump(dict_new, outfile)                  
+
+
+print("dict_new alla fine:", dict_new) 
+
+
+
